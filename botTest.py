@@ -119,4 +119,4 @@ async def on_message(message):
 
 
 # Run the user with this token
-client.run('ODkwOTA3NzMzNDE3Njg1MDEy.YU2oew.ONcjMB-MILH17_M08_Z34cjZgSw')
+client.run('Token')
