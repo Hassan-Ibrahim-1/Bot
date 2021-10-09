@@ -19,7 +19,6 @@ from discord.ext import commands
 client = commands.Bot(command_prefix=".")
 
 
-# Tells you when the bot is online
 @client.event
 async def on_ready():
     print('Bot is ready.')
@@ -83,40 +82,36 @@ async def unban(ctx, *, member):
             await ctx.channel.send(f'Unbanned {member}')
             return
 
-# Executes code when a message is sent
 @client.event
 async def on_message(message):
     await client.process_commands(message)
     if message.author.id == 759699257950994482 and message.content == 'test console' and message.channel.id == 891313671685435442:
 
-        # if i(0) < 2, do this
         i = False
         while i == False:
             consoleMessage = input()
-            await message.channel.send(consoleMessage)  # await message.channel.send() sends a message through the bot
+            await message.channel.send(consoleMessage)
 
-            # If the value is _
             if consoleMessage == 'exit':
                 await message.channel.send("Messages via console disabled")
                 print('Messages via console disabled')
                 i = True
+                return
 
     if message.author.id == 759699257950994482 and message.content == 'test console' and message.channel.id == 891373151924154418:
-
-        # if i(0) < 2, do this
+        
         i = False
         while i == False:
             consoleMessage = input()
-            await message.channel.send(consoleMessage)  # await message.channel.send() sends a message through the bot
+            await message.channel.send(consoleMessage)
 
-            # If the value is _
             if consoleMessage == 'exit':
                 await message.channel.send("Messages via console disabled")
                 print('Messages via console disabled')
                 i = True
+                return
         
 
 
 
-# Run the user with this token
 client.run('Token')
