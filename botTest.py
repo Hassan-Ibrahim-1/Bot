@@ -3,21 +3,63 @@ import random
 import os
 import sys
 
+from typing import Optional
 from datetime import datetime, timedelta
-from discord import Embed
+from discord import Embed, Member, NotFound
 from time import time
 from platform import python_version
-from discord.ext.commands import Cog
-from discord.ext.commands import command
+from discord.ext.commands import Cog, Greedy, Converter
+from discord.ext.commands import CheckFailure, BadArgument
+from discord.ext.commands import command, has_permissions, bot_has_permissions
 from discord import Activity, ActivityType
 from discord import __version__ as discord_version
 from psutil import Process, virtual_memory
-from guppy import hpy
+from discord.utils import find
 from discord.ext import commands
 
 
-client = commands.Bot(command_prefix=".")
+intents = discord.Intents.all()
+intents.members = True
+client = commands.Bot(command_prefix = '.', intents=intents)
 
+onJoinRole = 896343742544498718
+
+class BannedUser(Converter):
+	async def convert(self, ctx, arg):
+		if ctx.guild.me.guild_permissions.ban_members:
+			if arg.isdigit():
+				try:
+					return (await ctx.guild.fetch_ban(Object(id=int(arg)))).user
+				except NotFound:
+					raise BadArgument
+
+		banned = [e.user for e in await ctx.guild.bans()]
+		if banned:
+			if (user := find(lambda u: str(u) == arg, banned)) is not None:
+				return user
+			else:
+				raise BadArgument
+
+
+@client.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.CommandNotFound):
+        return
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send("Missing a required argument.")
+    if isinstance(error, commands.MissingPermissions):
+        await ctx.send("You do not have required permissions to run this command.")
+    if isinstance(error, commands.BotMissingPermissions):
+        await ctx.send("I don't have sufficient permissions!")
+
+@client.event
+async def on_member_join(person):
+    print(f"{person} has joined")
+    await person.add_roles(person.guild.get_role(onJoinRole))
+
+@client.event 
+async def on_member_remove(member):
+    print(f"{member} has left")
 
 @client.event
 async def on_ready():
@@ -28,7 +70,8 @@ async def ping(ctx):
     await ctx.channel.send(f'{round(client.latency * 1000)}ms')
 
 @client.command()
-@commands.has_role('admin')
+@bot_has_permissions(ban_members=True)
+@has_permissions(ban_members=True)
 async def clear(ctx):
     await ctx.channel.purge()
 
@@ -52,66 +95,45 @@ async def bot_stats(ctx):
     return
 
 @client.command()
-@commands.has_role('admin')
-async def kick(ctx, member : discord.Member, *, reason=None):
-
+@bot_has_permissions(ban_members=True)
+@has_permissions(ban_members=True)
+async def kick(ctx, member : discord.Member, *, reason="No reason provided."):
     await member.kick(reason=reason)
     await ctx.channel.send(f'Kicked {member.mention} for {reason}')
     return
 
 @client.command()
-@commands.has_role('admin')
-async def ban(ctx, member : discord.Member, *, reason=None):
-
+@bot_has_permissions(ban_members=True)
+@has_permissions(ban_members=True)
+async def ban(ctx, member : discord.Member, *, reason="No reason provided."):
     await member.ban(reason=reason)
     await ctx.channel.send(f'Banned {member.mention} for {reason}')
     return
 
 @client.command()
-@commands.has_role('admin')
-async def unban(ctx, *, member):
+@bot_has_permissions(ban_members=True)
+@has_permissions(ban_members=True)
+async def unban(ctx, targets : Greedy[BannedUser], *, reason: Optional[str] = "No reason provided."):
+    for target in targets:
+        await ctx.guild.unban(target, reason=reason)
+        await ctx.send(f'Unbanned {target.mention} for {reason}')
 
-    banned_users = await ctx.guild.bans()
-    member_name, member_discriminator = member.split('#')
 
-    for ban_entry in banned_users:
-        user = ban_entry.user
+@client.command()
+@bot_has_permissions(ban_members=True)
+@has_permissions(ban_members=True)
+async def console(ctx):
+    await ctx.channel.send("Messages via console are enabled")
+    i = True
+    while i == True:
+        consoleMessage = input()
+        await ctx.channel.send(consoleMessage)
 
-        if (user.name, user.discriminator) == (member_name, member_discriminator):
-            await ctx.guild.unban(user)
-            await ctx.channel.send(f'Unbanned {member}')
+        if consoleMessage == 'exit':
+            await ctx.channel.send("Messages via console are disabled")
+            print('Messages via console are disabled')
+            i = False
             return
-
-@client.event
-async def on_message(message):
-    await client.process_commands(message)
-    if message.author.id == 759699257950994482 and message.content == 'test console' and message.channel.id == 891313671685435442:
-
-        i = False
-        while i == False:
-            consoleMessage = input()
-            await message.channel.send(consoleMessage)
-
-            if consoleMessage == 'exit':
-                await message.channel.send("Messages via console disabled")
-                print('Messages via console disabled')
-                i = True
-                return
-
-    if message.author.id == 759699257950994482 and message.content == 'test console' and message.channel.id == 891373151924154418:
-        
-        i = False
-        while i == False:
-            consoleMessage = input()
-            await message.channel.send(consoleMessage)
-
-            if consoleMessage == 'exit':
-                await message.channel.send("Messages via console disabled")
-                print('Messages via console disabled')
-                i = True
-                return
-        
-
 
 
 client.run('Token')
